@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3x3 Kugelgrid mit Textur</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 15);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Licht von oben
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(0, 10, 0);
+    scene.add(light);
+
+    // Kugel-Textur-URLs von pngimg.com (bitte bei Bedarf erweitern)
+    const textureURLs = [
+      'https://pngimg.com/uploads/apple/apple_PNG12495.png',
+      'https://pngimg.com/uploads/banana/banana_PNG842.png',
+      'https://pngimg.com/uploads/cherry/cherry_PNG636.png',
+      'https://pngimg.com/uploads/orange/orange_PNG751.png',
+      'https://pngimg.com/uploads/strawberry/strawberry_PNG2637.png',
+    ];
+
+    const loader = new THREE.TextureLoader();
+    const spheres = [];
+
+    function getRandomTexture() {
+      const url = textureURLs[Math.floor(Math.random() * textureURLs.length)];
+      return loader.load(url);
+    }
+
+    // Grid aus 3x3 Kugeln
+    const spacing = 3;
+    for (let x = -1; x <= 1; x++) {
+      for (let z = -1; z <= 1; z++) {
+        const geometry = new THREE.SphereGeometry(1, 32, 32);
+        const material = new THREE.MeshStandardMaterial({
+          map: getRandomTexture(),
+          roughness: 0.4,
+          metalness: 0.1,
+        });
+
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(x * spacing, 0, z * spacing);
+        scene.add(sphere);
+        spheres.push({ mesh: sphere, rotationOffset: Math.random() * Math.PI * 2 });
+      }
+    }
+
+    // Raycaster für Klicks
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('click', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObjects(spheres.map(s => s.mesh));
+      if (intersects.length > 0) {
+        const sphere = intersects[0].object;
+        sphere.material.map = getRandomTexture();
+        sphere.material.needsUpdate = true;
+      }
+    });
+
+    // Controls (zum Drehen der Kamera)
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    // Animation
+    function animate(time) {
+      requestAnimationFrame(animate);
+      spheres.forEach(({ mesh, rotationOffset }) => {
+        mesh.rotation.y = Math.sin(time * 0.001 + rotationOffset) * 0.2;
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
